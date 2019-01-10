@@ -1,97 +1,224 @@
 
-var scores, roundScore, activePlayer;
-var gamePlaying = true;
+// Business logic
 
-// We initiate the game with the basic variables
-init();
-
-// Clicking the button to roll the dice
-document.querySelector(".btn-roll").addEventListener("click", function(){
-    if(gamePlaying) {
-        // 1. Get the random number
-        var dice = Math.floor((Math.random() * 6)) + 1;
-
-
-        // 2. Display the result
-        var diceDOM = document.querySelector(".dice");
-        diceDOM.style.display = "block";
-        diceDOM.src = "dice-" + dice + ".png";
-
-
-        // 3. Update the roundScore, but only if that's not 1
-        if(dice !== 1) {
-            //Add score
-            roundScore += dice;
-            document.querySelector("#current-" + activePlayer).textContent = roundScore;
-
-        } else {
-            // Next player
-            nextPlayer()
-        }
+//Player Object Constructor
+function Player(name) {
+    this.name = name;
+    this.turnRunningScore = 0;
+    this.totalBankedScore = 0;
+    this.lastRoll = 0;
+    this.currentTurnArray = [];
+  }
+  
+  //Creates our two players
+  var playerOne = new Player("Player One");
+  var playerTwo = new Player("Player Two");
+  
+  // Dice Constructor (argument = number of sides you want. default = 6)
+  function Dice(sides) {
+    this.sides = sides || 6;
+  }
+  
+  // Roll Prototype - Gets a random number between 1 and 6
+  Dice.prototype.roll = function() {
+    var roll = Math.floor((Math.random() * this.sides ) + 1);
+    if (roll === 1) {
+      alert("Doh! You rolled a 1. Your turn is over.");
     }
-});
-
-document.querySelector(".btn-hold").addEventListener("click", function(){
-    if(gamePlaying){
-        // Add currentScore to globalScore
-        scores[activePlayer] += roundScore;
-
-        // Update the UI to show the globalScore
-        document.querySelector("#score-" + activePlayer).textContent = scores[activePlayer];
-
-        // Check if player won the game
-        if(scores[activePlayer] >= 100){
-            document.querySelector("#name-" + activePlayer).textContent = "Winner!";
-            document.querySelector(".dice").style.display = "none";
-            document.querySelector(".player-" + activePlayer + "-panel").classList.add("winner");
-            document.querySelector(".player-" + activePlayer + "-panel").classList.remove("active");
-            gamePlaying = false;
-        } else {
-            nextPlayer()
-        }
+    return roll;
+  }
+  
+  // Current Turn Array Prototype
+  Player.prototype.addRollToArray = function (x) {
+    this.currentTurnArray.push(x)
+  }
+  
+  // Get sum of Turn Running Total (and exclude 1s from total)
+  Player.prototype.sumOfRolls = function() {
+    for (var i = 0; i < this.currentTurnArray.length; i++) {
+      if (this.currentTurnArray[i = this.currentTurnArray.length - 1] === 1) {
+        this.turnRunningScore = this.turnRunningScore;
+      } else {
+        this.turnRunningScore += this.currentTurnArray[i = this.currentTurnArray.length - 1];
+      }
     }
-})
-
-function nextPlayer() {
-    //Next player with ternary operator
-    activePlayer === 0 ? activePlayer = 1 : activePlayer = 0;
-    roundScore = 0;
-
-    document.getElementById("current-0").textContent = "0";
-    document.getElementById("current-1").textContent = "0";
-
-    document.querySelector(".player-0-panel").classList.toggle("active");
-    document.querySelector(".player-1-panel").classList.toggle("active");
-    document.querySelector(".dice").style.display = "none";
-}
-
-document.querySelector(".btn-new").addEventListener("click", init);
-
-function init(){
-    scores = [0,0];
-    activePlayer = 0;
-    roundScore = 0;
-
-    // document.querySelector("#current-" + activePlayer).textContent = dice;
-    document.querySelector(".dice").style.display = "none";
-    document.getElementById("score-0").textContent = "0";
-    document.getElementById("score-1").textContent = "0";
-    document.getElementById("current-0").textContent = "0";
-    document.getElementById("current-1").textContent = "0";
-    document.getElementById("name-0").textContent = "Player 1";
-    document.getElementById("name-1").textContent = "Player 2";
-    document.querySelector(".player-0-panel").classList.remove("active");
-    document.querySelector(".player-1-panel").classList.remove("active");
-    document.querySelector(".player-0-panel").classList.remove("winner");
-    document.querySelector(".player-1-panel").classList.remove("winner");
-
-    document.querySelector(".player-0-panel").classList.add("active");;
-}
-
-// Clicking for instructions
-document.querySelector(".instructions").addEventListener("click", function(){
-        document.querySelector(".modal").classList.add("show");
-        document.querySelector(".close").addEventListener("click", function(){
-            document.querySelector(".modal").classList.remove("show");
+  }
+  // Prototype to Bank points
+  Player.prototype.bankPoints = function() {
+    this.totalBankedScore += this.turnRunningScore;
+  }
+  
+  // Hold/Stay turnRunningScore <--Added this, score will bank when a user presses stay
+  Player.prototype.stayTurn = function () {
+    this.bankPoints();
+    this.turnRunningScore = 0;
+  }
+  
+  // Create six-sided dice
+  var sixSidedDice = new Dice();
+  
+  //Prototype to enter last roll value into player object
+  Player.prototype.setLastRoll = function(x) {
+    this.lastRoll = x;
+  }
+  
+  // Prototype to reset running total if 1 is rolled
+  Player.prototype.resetRunningTotalOnOne = function() {
+    if (this.lastRoll === 1) {
+      this.turnRunningScore = 0;
+    }
+  }
+  
+  // FRONT END LOGIC
+  
+  $(function() {
+    var playerOneTurn = true;
+  
+    //PLAYER ONE
+    $("#player-one-roll").on("click", function() {
+      var animationName = 'animated tada';
+      var animationEnd = 'webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend';
+      $("#dice-pic").addClass(animationName).one(animationEnd, function() {
+        $(this).removeClass(animationName);
+      });
     });
-});
+    //Player One Roll Button Click Event
+    $("#player-one-roll").click(function(event) {
+      event.preventDefault();
+      var sixSidedDiceRoll = sixSidedDice.roll();
+      playerOne.setLastRoll(sixSidedDiceRoll);
+      playerOne.resetRunningTotalOnOne(sixSidedDiceRoll);
+      playerOne.addRollToArray(sixSidedDiceRoll);
+      playerOne.sumOfRolls();
+  
+      $("#player-one-running").html("<h1 class='running-total'>" + playerOne.turnRunningScore + "</h1>");
+  
+      //Change image based on dice roll, AND swith player turn
+      if (sixSidedDiceRoll === 1) {
+        $("#dice-pic").attr("src", "img/one.png");
+        var playerOneTurn = false;
+        if (!playerOneTurn) {
+           $("#player-two-buttons").show();
+           $("#player-one-buttons").hide();
+        } else {
+          $("#player-one-buttons").show();
+          $("#player-two-buttons").hide();
+        }
+      } else if (sixSidedDiceRoll === 2) {
+        $("#dice-pic").attr("src", "img/two.png");
+      } else if (sixSidedDiceRoll === 3) {
+        $("#dice-pic").attr("src", "img/three.png");
+      } else if (sixSidedDiceRoll === 4) {
+        $("#dice-pic").attr("src", "img/four.png");
+      } else if (sixSidedDiceRoll === 5) {
+        $("#dice-pic").attr("src", "img/five.png");
+      } else if (sixSidedDiceRoll === 6) {
+        $("#dice-pic").attr("src", "img/six.png");
+      }
+    });
+  
+  //Player One Stay Button Click Event
+  $("#player-one-stay").click(function(event) {
+    event.preventDefault();
+  
+    playerOne.stayTurn();
+    $("#player-one-running").html("<h1 class='running-total'>" + playerOne.turnRunningScore + "</h1>");
+    $("#player-one-score").html("<h1 class='total-score'>" + playerOne.totalBankedScore + "</h1>");
+  
+    if (playerOne.totalBankedScore >= 20) {
+      $("#winner").show();
+      $("#winner").html("<h1 class='total-score'>" + "You win!!!" + "</h1>");
+    } else {
+      $("#winner").text("");
+    }
+  
+    var playerOneTurn = false;
+  
+    // $button set playerTwo
+      if (!playerOneTurn) {
+         $("#player-two-buttons").show();
+         $("#player-one-buttons").hide();
+      } else {
+  
+        $("#player-two-buttons").hide();
+        $("#player-one-buttons").show();
+      }
+    });
+  
+    /// PLAYER TWO
+  
+    //Roll Button Click Event
+  
+    $("#player-two-roll").click(function(event) {
+      event.preventDefault();
+      var sixSidedDiceRoll = sixSidedDice.roll();
+      playerTwo.setLastRoll(sixSidedDiceRoll);
+      playerTwo.resetRunningTotalOnOne(sixSidedDiceRoll);
+      playerTwo.addRollToArray(sixSidedDiceRoll);
+      playerTwo.sumOfRolls();
+  
+      $("#player-two-running").html("<h1 class='running-total'>" + playerTwo.turnRunningScore + "</h1>");
+  
+      //Change image based on dice roll, AND swith player turn
+      if (sixSidedDiceRoll === 1) {
+        $("#dice-pic").attr("src", "img/one.png");
+        var playerOneTurn = true;
+        if (playerOneTurn) {
+           $("#player-one-buttons").show();
+           $("#player-two-buttons").hide();
+        } else {
+          $("#player-two-buttons").show();
+          $("#player-one-buttons").hide();
+        }
+      } else if (sixSidedDiceRoll === 2) {
+        $("#dice-pic").attr("src", "img/two.png");
+      } else if (sixSidedDiceRoll === 3) {
+        $("#dice-pic").attr("src", "img/three.png");
+      } else if (sixSidedDiceRoll === 4) {
+        $("#dice-pic").attr("src", "img/four.png");
+      } else if (sixSidedDiceRoll === 5) {
+        $("#dice-pic").attr("src", "img/five.png");
+      } else if (sixSidedDiceRoll === 6) {
+        $("#dice-pic").attr("src", "img/six.png");
+      }
+    });
+  
+  // Player Two animationEnd
+  $("#player-two-roll").on("click", function() {
+    var animationName = 'animated tada';
+    var animationEnd = 'webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend';
+    $("#dice-pic").addClass(animationName).one(animationEnd, function() {
+      $(this).removeClass(animationName);
+    });
+  });
+  
+  //Player Two Stay Button Click Event
+  $("#player-two-stay").click(function(event) {
+    event.preventDefault();
+  
+    // What happens when a user clicks the stay button
+    playerTwo.stayTurn();
+    $("#player-two-running").html("<h1 class='running-total'>" + playerTwo.turnRunningScore + "</h1>");
+    $("#player-two-score").html("<h1 class='total-score'>" + playerTwo.totalBankedScore + "</h1>");
+  
+    // Win condition
+    if (playerTwo.totalBankedScore >= 20) {
+      $("#winner").show();
+      $("#winner").html("<h1 class='total-score'>" + "You win!!!" + "</h1>");
+    } else {
+      $("#winner").text("");
+    }
+  
+    var playerOneTurn = true;
+  
+    // Toggle between players
+      if (playerOneTurn) {
+         $("#player-one-buttons").show();
+         $("#player-two-buttons").hide();
+      } else {
+        $("#player-two-buttons").show();
+        $("#player-one-buttons").hide();
+      }
+    });
+  });
+  
