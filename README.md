@@ -15,8 +15,6 @@ This game use the dice to roll it is played by two peaple where they playe by ro
 . CSS
 . JavaScript
 ## Contact information.
-```
 musosoaimee@gmail.com
-```
 ## licence and copyright
 MIT licence copyright 2019
