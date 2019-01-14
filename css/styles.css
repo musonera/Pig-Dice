@@ -2,6 +2,9 @@ body {
     text-align: center;
     background-color:azure;
   }
+  #main{
+    text-align: left;
+  }
   
   img {
     width: 100%;
